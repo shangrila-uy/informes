@@ -23,7 +23,8 @@ export class GoogleSheetsService {
     const response = await fetch(url, { ...options, headers });
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error?.message || 'Sheets API Error');
+      const message = error.error?.message || 'Sheets API Error';
+      throw new Error(`${response.status}: ${message}`);
     }
     return response.json();
   }

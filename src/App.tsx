@@ -106,11 +106,12 @@ export default function App() {
       setData(publishers);
     } catch (err) {
       console.error('Fetch Error:', err);
-      if (err instanceof Error && err.message.includes('401')) {
+      const errorMessage = err instanceof Error ? err.message : '';
+      if (errorMessage.includes('401') || errorMessage.toLowerCase().includes('invalid authentication credentials')) {
         handleLogout();
-        setError('Sesión expirada. Por favor inicie sesión nuevamente.');
+        setError('Sesión expirada o inválida. Por favor inicie sesión nuevamente.');
       } else {
-        setError(err instanceof Error ? err.message : 'Error al cargar datos de Google Sheets');
+        setError(errorMessage || 'Error al cargar datos de Google Sheets');
       }
     } finally {
       setLoading(false);
