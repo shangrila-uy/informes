@@ -27,7 +27,7 @@ async function fetchWithAuth(url, options = {}) {
   const response = await fetch(url, { ...options, headers });
   if (!response.ok) {
     const error = await response.json();
-    const message = error.error?.message || 'Sheets API Error';
+    const message = error.error?.message || 'Error de la API de Google Sheets';
     throw new Error(`${response.status}: ${message}`);
   }
   return response.json();
@@ -187,7 +187,7 @@ function LoginView() {
         <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
           <i data-lucide="file-spreadsheet" class="w-8 h-8"></i>
         </div>
-        <h1 class="text-2xl font-bold text-slate-900 mb-2">Registro de Publicadores</h1>
+        <h1 class="text-2xl font-bold text-slate-900 mb-2">Informe de Servicio</h1>
         <p class="text-slate-500 mb-8">Conecte con Google Sheets para gestionar los informes del Grupo 1.</p>
         
         ${state.error ? `
@@ -219,10 +219,10 @@ function MainView() {
   return `
     <header class="h-20 bg-white border-b border-slate-200 px-10 flex items-center justify-between flex-shrink-0">
       <div class="flex items-center gap-4">
-        <div class="w-10 h-10 bg-indigo-600 rounded flex items-center justify-center text-white font-bold text-xl ring-4 ring-indigo-50">G</div>
+        <div class="w-10 h-10 bg-indigo-600 rounded flex items-center justify-center text-white font-bold text-xl ring-4 ring-indigo-50">1</div>
         <div>
-          <h1 class="text-xl font-bold tracking-tight">Registro de Publicadores</h1>
-          <p class="text-xs text-slate-500 uppercase tracking-widest font-semibold">Grupo 1 • Gestión de Informes</p>
+          <h1 class="text-xl font-bold tracking-tight">Informe de Servicio</h1>
+          <p class="text-xs text-slate-500 uppercase tracking-widest font-semibold">Grupo 1 • Shangrilá</p>
         </div>
       </div>
       <div class="flex items-center gap-4">
@@ -232,9 +232,14 @@ function MainView() {
             type="text" 
             id="search-input"
             placeholder="Buscar..."
-            class="bg-slate-50 border border-slate-200 rounded py-2 pl-9 pr-3 w-64 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-xs"
+            class="bg-slate-50 border border-slate-200 rounded py-2 pl-9 pr-10 w-64 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-xs"
             value="${state.searchTerm}"
           />
+          ${state.searchTerm ? `
+            <button id="clear-search" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          ` : ''}
         </div>
         <div class="h-10 w-px bg-slate-200 mx-2"></div>
         <div class="text-right hidden sm:block">
@@ -257,7 +262,7 @@ function MainView() {
     ` : ''}
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-10 py-6 flex-shrink-0">
-      ${StatCard("Total Grupo", groupData.length)}
+      ${StatCard("Publicadores", groupData.length)}
       ${StatCard("Activos", activos)}
       ${StatCard("Auxiliares", auxiliares)}
       ${StatCard("Regulares", regulares)}
@@ -311,13 +316,24 @@ function MainView() {
               </div>
 
               <div class="col-span-1 px-2">
-                <input 
-                  type="number" 
-                  class="horas-input w-full text-center bg-transparent border border-transparent hover:border-slate-200 focus:border-indigo-400 focus:ring-0 rounded-lg py-1 text-sm outline-none transition-all font-bold ${pub.horas === 0 ? 'opacity-30' : ''} disabled:opacity-30 disabled:cursor-not-allowed"
-                  value="${pub.horas}"
-                  min="0"
-                  ${(state.saving === `${pub.id}-horas` || !pub.precursorado) ? 'disabled' : ''}
-                />
+                ${pub.precursorado ? (() => {
+                  const hasError = pub.participo && pub.precursorado && pub.horas === 0;
+                  return `
+                    <input 
+                      type="number" 
+                      class="horas-input w-full text-center rounded-lg py-1 text-sm outline-none transition-all font-bold 
+                      ${hasError 
+                        ? 'bg-red-50 border-red-500 text-red-700 ring-1 ring-red-500' 
+                        : 'bg-transparent border-transparent hover:border-slate-200 focus:border-indigo-400'
+                      } 
+                      ${pub.horas === 0 && !hasError ? 'opacity-30' : ''} 
+                      disabled:opacity-30 disabled:cursor-not-allowed"
+                      value="${pub.horas}"
+                      min="0"
+                      ${state.saving === `${pub.id}-horas` ? 'disabled' : ''}
+                    />
+                  `;
+                })() : ''}
               </div>
 
               <div class="col-span-4 px-8">
@@ -398,6 +414,11 @@ function render() {
     }
   });
 
+  $('#clear-search').on('click', () => {
+    state.searchTerm = "";
+    render();
+  });
+
   $('.participo-check').on('change', function() {
     const id = $(this).closest('[data-pub-id]').data('pub-id');
     const pub = state.data.find(p => p.id === id);
@@ -416,10 +437,20 @@ function render() {
     handleUpdate(pub, 'precursorado', $(this).val());
   });
 
-  $('.horas-input').on('change', function() {
+  $('.horas-input').on('change', async function() {
     const id = $(this).closest('[data-pub-id]').data('pub-id');
     const pub = state.data.find(p => p.id === id);
-    handleUpdate(pub, 'horas', parseInt($(this).val()) || 0);
+    const val = parseInt($(this).val()) || 0;
+    
+    // Si se ingresa un número diferente de 0 en horas, marcar la casilla "Participó"
+    if (val > 0 && !pub.participo) {
+      await handleUpdate(pub, 'participo', true);
+      // Re-fetch pub after state update from handleUpdate
+      const updatedPub = state.data.find(p => p.id === id);
+      handleUpdate(updatedPub, 'horas', val);
+    } else {
+      handleUpdate(pub, 'horas', val);
+    }
   });
 
   $('.notas-input').on('blur', function() {
