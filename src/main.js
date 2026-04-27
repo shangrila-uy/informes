@@ -185,6 +185,13 @@ function login() {
       if (response.access_token) {
         localStorage.setItem('sheets_access_token', response.access_token);
         
+        // Mostrar estado de carga inmediatamente al recibir el token
+        setState({ 
+          accessToken: response.access_token, 
+          loading: true, 
+          error: null 
+        });
+        
         // Fetch user email to determine group
         try {
           const userResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
@@ -200,15 +207,12 @@ function login() {
           localStorage.setItem('group_number', groupNumber);
           
           setState({ 
-            accessToken: response.access_token, 
             userEmail: email, 
-            groupNumber: groupNumber,
-            error: null 
+            groupNumber: groupNumber
           });
           loadData();
         } catch (err) {
           console.error('Error fetching user info:', err);
-          setState({ accessToken: response.access_token, error: null });
           loadData();
         }
       }
@@ -284,20 +288,10 @@ function LoginView() {
   `;
 }
 
-function MainView() {
+function MainHeader() {
   const currentGroup = state.groupNumber.toString();
-  const groupData = state.data.filter(p => {
-    const norm = p.grupo.toString().trim();
-    const isCurrentGroup = norm === currentGroup || norm === `${currentGroup}.0` || norm.toLowerCase() === `grupo ${currentGroup}`;
-    return isCurrentGroup && p.nombre.toLowerCase().includes(state.searchTerm.toLowerCase());
-  });
-
-  const activos = groupData.filter(p => p.participo).length;
-  const auxiliares = groupData.filter(p => p.precursorado.toLowerCase().includes('auxiliar')).length;
-  const regulares = groupData.filter(p => p.precursorado.toLowerCase() === 'regular').length;
-
   return `
-    <header class="h-20 bg-white border-b border-slate-200 px-10 flex items-center justify-between flex-shrink-0">
+    <header class="h-20 bg-white border-b border-slate-200 px-4 sm:px-10 flex items-center justify-between flex-shrink-0">
       <div class="flex items-center gap-4">
         <div class="w-10 h-10 bg-indigo-600 rounded flex items-center justify-center text-white font-bold text-xl ring-4 ring-indigo-50">${currentGroup}</div>
         <div>
@@ -331,7 +325,23 @@ function MainView() {
         </button>
       </div>
     </header>
+  `;
+}
 
+function MainView() {
+  const currentGroup = state.groupNumber.toString();
+  const groupData = state.data.filter(p => {
+    const norm = p.grupo.toString().trim();
+    const isCurrentGroup = norm === currentGroup || norm === `${currentGroup}.0` || norm.toLowerCase() === `grupo ${currentGroup}`;
+    return isCurrentGroup && p.nombre.toLowerCase().includes(state.searchTerm.toLowerCase());
+  });
+
+  const activos = groupData.filter(p => p.participo).length;
+  const auxiliares = groupData.filter(p => p.precursorado.toLowerCase().includes('auxiliar')).length;
+  const regulares = groupData.filter(p => p.precursorado.toLowerCase() === 'regular').length;
+
+  return `
+    ${MainHeader()}
     ${state.error ? `
       <div class="mx-10 mt-6 bg-red-50 border border-red-200 p-4 rounded-xl flex items-center justify-between">
         <p class="text-red-700 text-sm font-medium">${state.error}</p>
@@ -535,14 +545,64 @@ function StatCard(label, value) {
   `;
 }
 
+function SkeletonStatCard() {
+  return `
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm animate-pulse min-h-[90px] flex flex-col justify-between">
+      <div class="h-2 w-20 bg-slate-100 rounded-full"></div>
+      <div class="h-8 w-12 bg-slate-100 rounded-lg"></div>
+    </div>
+  `;
+}
+
+function SkeletonRow() {
+  return `
+    <div class="hidden md:grid grid-cols-12 border-b border-slate-100 hover:bg-indigo-50/20 transition-colors items-center min-h-[3.5rem] animate-pulse">
+      <div class="col-span-3 px-8"><div class="h-4 bg-slate-100 rounded-full w-3/4"></div></div>
+      <div class="col-span-1 flex justify-center"><div class="h-5 w-5 bg-slate-100 rounded"></div></div>
+      <div class="col-span-1 px-2 flex justify-center"><div class="h-4 bg-slate-100 rounded w-8"></div></div>
+      <div class="col-span-2 px-4 flex justify-center"><div class="h-6 bg-slate-100 rounded-lg w-full"></div></div>
+      <div class="col-span-1 px-2 flex justify-center"><div class="h-4 bg-slate-100 rounded w-8"></div></div>
+      <div class="col-span-4 px-8"><div class="h-4 bg-slate-100 rounded-full w-1/2"></div></div>
+    </div>
+    <div class="md:hidden p-4 border-b border-slate-100 space-y-3 animate-pulse">
+      <div class="h-5 bg-slate-100 rounded-full w-1/2 mb-4"></div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="h-11 bg-slate-50 border border-slate-100 rounded-xl"></div>
+        <div class="h-11 bg-slate-50 border border-slate-100 rounded-xl"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="h-11 bg-slate-50 border border-slate-100 rounded-xl"></div>
+        <div class="h-11 bg-slate-50 border border-slate-100 rounded-xl"></div>
+      </div>
+      <div class="h-16 bg-slate-50 border border-slate-100 rounded-xl"></div>
+    </div>
+  `;
+}
+
 function LoadingView() {
   return `
-    <div class="min-h-screen bg-slate-50 flex items-center justify-center">
-      <div class="text-center">
-        <i data-lucide="loader-2" class="w-10 h-10 animate-spin text-indigo-500 mx-auto mb-4"></i>
-        <p class="text-slate-500 font-medium">Cargando datos del Grupo ${state.groupNumber}...</p>
-      </div>
+    ${MainHeader()}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-10 py-6 flex-shrink-0">
+      ${SkeletonStatCard()}
+      ${SkeletonStatCard()}
+      ${SkeletonStatCard()}
+      ${SkeletonStatCard()}
     </div>
+    <main class="px-4 sm:px-10 flex-grow flex flex-col min-h-0 pb-8">
+      <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden flex flex-col h-full shadow-sm">
+        <div class="hidden md:grid grid-cols-12 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500 py-4">
+          <div class="col-span-3 px-8">Publicador</div>
+          <div class="col-span-1 text-center">Particip&oacute;</div>
+          <div class="col-span-1 text-center">Cursos</div>
+          <div class="col-span-2 text-center">Precursorado</div>
+          <div class="col-span-1 text-center">Horas</div>
+          <div class="col-span-4 px-8">Notas</div>
+        </div>
+        <div class="flex-grow overflow-y-auto">
+          ${Array(8).fill(SkeletonRow()).join('')}
+        </div>
+      </div>
+    </main>
   `;
 }
 
