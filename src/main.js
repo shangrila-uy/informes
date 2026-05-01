@@ -309,7 +309,7 @@ function LoginView() {
         <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
           <i data-lucide="file-spreadsheet" class="w-8 h-8"></i>
         </div>
-        <h1 class="text-2xl font-bold text-slate-900 mb-2">Informe de Servicio</h1>
+        <h1 class="text-2xl font-bold text-slate-900 mb-2">Shangrilá Informes</h1>
         <p class="text-slate-500 mb-8">Conecte con Google Sheets para gestionar los informes de servicio.</p>
         
         ${state.error ? `
@@ -346,7 +346,7 @@ function MainHeader() {
           <div class="w-10 h-10 bg-indigo-600 rounded flex items-center justify-center text-white font-bold text-xl ring-4 ring-indigo-50">${currentGroup}</div>
         `}
         <div>
-          <h1 class="text-xl font-bold tracking-tight">Informe de Servicio</h1>
+          <h1 class="text-xl font-bold tracking-tight">Shangrilá Informes</h1>
           ${state.fetchingInfo ? `
             <div class="h-3 w-24 bg-slate-100 rounded mt-1 animate-pulse"></div>
           ` : `
